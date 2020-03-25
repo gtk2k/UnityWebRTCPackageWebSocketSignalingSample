@@ -6,6 +6,7 @@ WebSocketを使ったシグナリングで接続するサンプル
 Unity側でWebSocketサーバーを立て、ブラウザーはこのWebSocketサーバーに接続してシグナリングを行うサンプルシーン。
 別途、シグナリングサーバーを立てる必要がない。
 Web側のテストページはTestWebPageフォルダにある wsserverhandlertest.html(wsserverhandlertest.js)  
+
 (2020/3/26 Update)  
 WebSocketServerからHttpServerに変更、実行するとWebSocketシグナリングサーバーおよび簡易ウェブサーバーが立つ。
 (DocumentRoot は StreamingAssets/webroot)

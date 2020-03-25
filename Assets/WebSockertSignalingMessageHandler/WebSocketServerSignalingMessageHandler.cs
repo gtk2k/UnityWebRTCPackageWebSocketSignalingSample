@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using WebSocketSharp;
 using WebSocketSharp.Server;
@@ -30,18 +31,55 @@ namespace WebSocketSignalingMessageHandler
 
         public Dictionary<string, WebSocket> Clients;
         public WebSocketServer wss;
+        public HttpServer httpsvr;
         public string path;
+
+        private Dictionary<string, string> mimeTypes;
 
         public WebSocketServerSignalingMessageHandler() : base()
         {
             Clients = new Dictionary<string, WebSocket>();
+
+            mimeTypes = new Dictionary<string, string>
+            {
+                {"txt", "text/plain" },
+                {"html", "text/html" },
+                {"htm", "text/html" },
+                {"xhtml", "application/xhtml+xml" },
+                {"xml", "text/xml" },
+                {"json", "application/json" },
+
+                {"css", "text/css" },
+                {"js", "text/javascript" },
+                {"php", "application/x-httpd-php" },
+
+                {"gif", "image/gif" },
+                {"jpg", "image/jpeg" },
+                {"png", "image/png" },
+                {"ico", "image/vnd.microsoft.icon" },
+
+                {"mpg", "video/mpeg"  },
+                {"mp4", "video/mp4" },
+                {"webm", "video/webm" },
+                {"ogg", "video/ogg" },
+                {"mov", "video/quicktime" },
+
+
+                {"mp3", "audio/mpeg" },
+                {"m4a", "audio/aac" },
+                {"octet", "application/octet-stream" }
+            };
         }
 
         public virtual void Init(int port = 80, string path = "/")
         {
-            wss = new WebSocketServer(port);
+            httpsvr = new HttpServer(port);
+            httpsvr.DocumentRootPath = Path.Combine(Application.streamingAssetsPath, "webroot");
+            httpsvr.OnGet += Httpsvr_OnGet;
+            httpsvr.Log.Level = LogLevel.Trace;
+
             this.path = path;
-            wss.AddWebSocketService<SignalerOriginalServerBehaviour>(path, behaviour =>
+            httpsvr.AddWebSocketService<SignalerOriginalServerBehaviour>(path, behaviour =>
             {
                 behaviour.OnClientConnect += (clientId, ws) =>
                 {
@@ -123,19 +161,49 @@ namespace WebSocketSignalingMessageHandler
             });
         }
 
+        private void Httpsvr_OnGet(object sender, HttpRequestEventArgs e)
+        {
+            Debug.Log(e.Request.Url);
+            e.TryReadFile(e.Request.RawUrl, out byte[] contents);
+            var ext = Path.GetExtension(e.Request.RawUrl).Trim();
+            ext = ext.ToLower();
+            if (ext.StartsWith("."))
+                ext = ext.Substring(1);
+            if (string.IsNullOrEmpty(ext) || !mimeTypes.ContainsKey(ext))
+                e.Response.ContentType = mimeTypes["octet"];
+            else
+                e.Response.ContentType = mimeTypes[ext];
+            e.Response.ContentLength64 = contents.LongLength;
+            e.Response.Close(contents, true);
+        }
+
         public virtual void Start()
         {
-            if (wss == null || wss.WebSocketServices.Count == 0)
-                throw new Exception("[WSSignalingHandler] WebSocketServer not yet ready");
-            wss.Start();
+            //if (wss == null || wss.WebSocketServices.Count == 0)
+            //    throw new Exception("[WSSignalingHandler] WebSocketServer not yet ready");
+            //wss.Start();
+            try
+            {
+                if (httpsvr == null || httpsvr.WebSocketServices.Count == 0)
+                    throw new Exception("[WSSignalingHandler] WebSocketServer not yet ready");
+                httpsvr.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex.Message);
+            }
         }
 
         public virtual void Stop()
         {
-            if (wss != null)
-                wss.Stop();
-            wss.RemoveWebSocketService(path);
-            wss = null;
+            //if (wss != null)
+            //    wss.Stop();
+            //wss.RemoveWebSocketService(path);
+            //wss = null;
+            if (httpsvr != null)
+                httpsvr.Stop();
+            httpsvr.RemoveWebSocketService(path);
+            httpsvr = null;
         }
 
         public virtual void Dispose()
@@ -267,6 +335,10 @@ namespace WebSocketSignalingMessageHandler
                             OnIceCandidate.Invoke(ID, msg.candidate, msg.sdpMid, msg.sdpMLineIndex);
                             return;
                         }
+                        else if(msg.type != null && msg.type == "log")
+                        {
+                            Debug.Log($"<color='#aaccff'>[Log] {msg.logMsg}</color>");
+                        }
                     }
                     OnOtherTextData.Invoke(ID, e.Data);
                 }
@@ -284,7 +356,7 @@ namespace WebSocketSignalingMessageHandler
             OnClientDisconnect(ID);
         }
 
-        protected override void OnError(ErrorEventArgs e)
+        protected override void OnError(WebSocketSharp.ErrorEventArgs e)
         {
             OnBehaviourError(ID, e.Exception);
         }

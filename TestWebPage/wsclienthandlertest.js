@@ -39,3 +39,6 @@ pc.ontrack = evt => {
 pc.ondatachannel = evt => {
     console.log(`data channel open:${evt.channel.name}`);
 };
+vid.onloadedmetadata = evt => {
+    console.log(`${vid.videoWidth}x${vid.videoHeight}`);
+}

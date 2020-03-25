@@ -14,6 +14,7 @@ namespace WebSocketSignalingMessageHandler
         public string sdpMid;
         public int sdpMLineIndex;
         public string clientId;
+        public string logMsg;
 
         public SignalingMessage(string type, string sdp) : this(type, sdp, null) { }
         public SignalingMessage(string candidate, string sdpMid, int sdpMLineIndex) : this(candidate, sdpMid, sdpMLineIndex, null) { }

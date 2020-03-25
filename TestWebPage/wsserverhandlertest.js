@@ -1,4 +1,4 @@
-const ws = new WebSocket('ws://localhost');
+const ws = new WebSocket(`ws://${location.hostname}`);
 ws.onopen = evt => {
     console.log('ws open');
 };
